@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/2.2/ref/settings/
 """
 
+
 from __future__ import annotations
 from typing import Any, Optional, TYPE_CHECKING
 import ipaddress
@@ -139,12 +140,12 @@ else:
                 hasher = sha512()
                 with open(str(file_name), "rb") as f:
                     while True:
-                        data = f.read()
-                        if not data:
+                        if data := f.read():
+                            hasher.update(data)
+                        else:
                             break
-                        hasher.update(data)
                 hash = base64.b64encode(hasher.digest()).decode("utf-8")
-                csp_style_values.append("'sha512-%s'" % hash)
+                csp_style_values.append(f"'sha512-{hash}'")
 
 CSP_STYLE_SRC = tuple(csp_style_values)
 
@@ -152,11 +153,9 @@ CSP_IMG_SRC = ["'self'"] + AVATAR_IMG_SRC
 REFERRER_POLICY = "strict-origin-when-cross-origin"
 
 ALLOWED_HOSTS = []
-DJANGO_ALLOWED_HOSTS = config("DJANGO_ALLOWED_HOST", "", cast=Csv())
-if DJANGO_ALLOWED_HOSTS:
+if DJANGO_ALLOWED_HOSTS := config("DJANGO_ALLOWED_HOST", "", cast=Csv()):
     ALLOWED_HOSTS += DJANGO_ALLOWED_HOSTS
-DJANGO_ALLOWED_SUBNET = config("DJANGO_ALLOWED_SUBNET", None)
-if DJANGO_ALLOWED_SUBNET:
+if DJANGO_ALLOWED_SUBNET := config("DJANGO_ALLOWED_SUBNET", None):
     ALLOWED_HOSTS += [str(ip) for ip in ipaddress.IPv4Network(DJANGO_ALLOWED_SUBNET)]
 
 
@@ -193,9 +192,10 @@ TWILIO_SMS_APPLICATION_SID = config("TWILIO_SMS_APPLICATION_SID", None)
 TWILIO_MESSAGING_SERVICE_SID = config("TWILIO_MESSAGING_SERVICE_SID", "", cast=Csv())
 TWILIO_TEST_ACCOUNT_SID = config("TWILIO_TEST_ACCOUNT_SID", None)
 TWILIO_TEST_AUTH_TOKEN = config("TWILIO_TEST_AUTH_TOKEN", None)
-TWILIO_ALLOWED_COUNTRY_CODES = set(
-    code.upper() for code in config("TWILIO_ALLOWED_COUNTRY_CODES", "US,CA", cast=Csv())
-)
+TWILIO_ALLOWED_COUNTRY_CODES = {
+    code.upper()
+    for code in config("TWILIO_ALLOWED_COUNTRY_CODES", "US,CA", cast=Csv())
+}
 MAX_MINUTES_TO_VERIFY_REAL_PHONE = config(
     "MAX_MINUTES_TO_VERIFY_REAL_PHONE", 5, cast=int
 )
@@ -248,8 +248,7 @@ INSTALLED_APPS = [
     "api.apps.ApiConfig",
 ]
 
-API_DOCS_ENABLED = config("API_DOCS_ENABLED", False, cast=bool) or DEBUG
-if API_DOCS_ENABLED:
+if API_DOCS_ENABLED := config("API_DOCS_ENABLED", False, cast=bool) or DEBUG:
     INSTALLED_APPS += [
         "drf_spectacular",
         "drf_spectacular_sidecar",
@@ -295,11 +294,13 @@ if PHONES_ENABLED:
 
 # statsd middleware has to be first to catch errors in everything else
 def _get_initial_middleware() -> list[str]:
-    if STATSD_ENABLED:
-        return [
+    return (
+        [
             "privaterelay.middleware.ResponseMetrics",
         ]
-    return []
+        if STATSD_ENABLED
+        else []
+    )
 
 
 MIDDLEWARE = _get_initial_middleware()
@@ -398,12 +399,11 @@ WSGI_APPLICATION = "privaterelay.wsgi.application"
 
 DATABASES = {
     "default": dj_database_url.config(
-        default="sqlite:///%s" % os.path.join(BASE_DIR, "db.sqlite3")
+        default=f'sqlite:///{os.path.join(BASE_DIR, "db.sqlite3")}'
     )
 }
 
-REDIS_URL = config("REDIS_URL", "", cast=str)
-if REDIS_URL:
+if REDIS_URL := config("REDIS_URL", "", cast=str):
     CACHES = {
         "default": {
             "BACKEND": "django_redis.cache.RedisCache",
@@ -428,10 +428,10 @@ elif RELAY_CHANNEL == "local":
 if ADMIN_ENABLED:
     _DJANGO_PWD_VALIDATION = "django.contrib.auth.password_validation"
     AUTH_PASSWORD_VALIDATORS = [
-        {"NAME": _DJANGO_PWD_VALIDATION + ".UserAttributeSimilarityValidator"},
-        {"NAME": _DJANGO_PWD_VALIDATION + ".MinimumLengthValidator"},
-        {"NAME": _DJANGO_PWD_VALIDATION + ".CommonPasswordValidator"},
-        {"NAME": _DJANGO_PWD_VALIDATION + ".NumericPasswordValidator"},
+        {"NAME": f"{_DJANGO_PWD_VALIDATION}.UserAttributeSimilarityValidator"},
+        {"NAME": f"{_DJANGO_PWD_VALIDATION}.MinimumLengthValidator"},
+        {"NAME": f"{_DJANGO_PWD_VALIDATION}.CommonPasswordValidator"},
+        {"NAME": f"{_DJANGO_PWD_VALIDATION}.NumericPasswordValidator"},
     ]
 
 

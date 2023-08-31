@@ -252,7 +252,7 @@ class RelayAddressTest(TestCase):
         relay_address.block_list_emails = True
         relay_address.save()
         relay_address.refresh_from_db()
-        assert relay_address.block_list_emails is False
+        assert not relay_address.block_list_emails
 
     def test_premium_user_can_set_block_list_emails(self):
         relay_address = RelayAddress.objects.create(user=self.premium_user)
@@ -260,7 +260,7 @@ class RelayAddressTest(TestCase):
         relay_address.block_list_emails = True
         relay_address.save()
         relay_address.refresh_from_db()
-        assert relay_address.block_list_emails is True
+        assert relay_address.block_list_emails
 
     def test_formerly_premium_user_clears_block_list_emails(self):
         relay_address = RelayAddress.objects.create(
@@ -288,9 +288,9 @@ class RelayAddressTest(TestCase):
         relay_address.used_on = "https://example.com"
         relay_address.save()
         relay_address.refresh_from_db()
-        assert relay_address.description == ""
-        assert relay_address.generated_for == ""
-        assert relay_address.used_on == ""
+        assert not relay_address.description
+        assert not relay_address.generated_for
+        assert not relay_address.used_on
 
 
 class ProfileTestCase(TestCase):
@@ -903,7 +903,7 @@ class DomainAddressTest(TestCase):
         # not been fixed yet
         for i in range(5):
             domain_address = DomainAddress.make_domain_address(
-                self.user_profile, "test-different-%s" % i
+                self.user_profile, f"test-different-{i}"
             )
             assert domain_address.first_emailed_at is None
         domain_addresses = DomainAddress.objects.filter(user=self.user).values_list(
@@ -920,7 +920,7 @@ class DomainAddressTest(TestCase):
     @override_settings(MAX_ADDRESS_CREATION_PER_DAY=10)
     def test_make_domain_address_has_limit(self) -> None:
         for i in range(10):
-            DomainAddress.make_domain_address(self.user_profile, "foobar" + str(i))
+            DomainAddress.make_domain_address(self.user_profile, f"foobar{str(i)}")
         with pytest.raises(CannotMakeAddressException) as exc_info:
             DomainAddress.make_domain_address(self.user_profile, "one-too-many")
         assert exc_info.value.get_codes() == "account_is_paused"
@@ -1004,7 +1004,7 @@ class DomainAddressTest(TestCase):
         domain_address.block_list_emails = True
         domain_address.save()
         domain_address.refresh_from_db()
-        assert domain_address.block_list_emails is True
+        assert domain_address.block_list_emails
 
     def test_formerly_premium_user_clears_block_list_emails(self):
         domain_address = DomainAddress.objects.create(
@@ -1030,4 +1030,4 @@ class DomainAddressTest(TestCase):
         domain_address.description = "Arbitrary description"
         domain_address.save()
         domain_address.refresh_from_db()
-        assert domain_address.description == ""
+        assert not domain_address.description

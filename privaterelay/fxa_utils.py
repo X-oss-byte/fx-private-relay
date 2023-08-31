@@ -149,14 +149,13 @@ def get_phone_subscription_dates(social_account):
         subscription_created_timestamp = None
         subscription_start_timestamp = None
         subscription_end_timestamp = None
-        if sub.get("product_id") in product_w_phone_capabilites:
-            subscription_created_timestamp = sub.get("created")
-            subscription_start_timestamp = sub.get("current_period_start")
-            subscription_end_timestamp = sub.get("current_period_end")
-        else:
+        if sub.get("product_id") not in product_w_phone_capabilites:
             # not a product id for phone subscription, continue
             continue
 
+        subscription_created_timestamp = sub.get("created")
+        subscription_start_timestamp = sub.get("current_period_start")
+        subscription_end_timestamp = sub.get("current_period_end")
         subscription_date_none = (
             subscription_created_timestamp
             and subscription_start_timestamp

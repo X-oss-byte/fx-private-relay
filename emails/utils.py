@@ -150,7 +150,6 @@ def get_email_domain_from_settings():
 
 
 def _get_hero_img_src(lang_code):
-    img_locale = "en"
     avail_l10n_image_codes = [
         "cs",
         "de",
@@ -169,13 +168,8 @@ def _get_hero_img_src(lang_code):
         "zh",
     ]
     major_lang = lang_code.split("-")[0]
-    if major_lang in avail_l10n_image_codes:
-        img_locale = major_lang
-
-    return (
-        settings.SITE_ORIGIN
-        + f"/static/images/email-images/first-time-user/hero-image-{img_locale}.png"
-    )
+    img_locale = major_lang if major_lang in avail_l10n_image_codes else "en"
+    return f"{settings.SITE_ORIGIN}/static/images/email-images/first-time-user/hero-image-{img_locale}.png"
 
 
 def get_welcome_email(user: User, format: str) -> str:
@@ -230,8 +224,7 @@ def create_message(
     msg_with_body = _add_body_to_message(msg_with_headers, message_body)
     if not attachments:
         return msg_with_body
-    msg_with_attachments = _add_attachments_to_message(msg_with_body, attachments)
-    return msg_with_attachments
+    return _add_attachments_to_message(msg_with_body, attachments)
 
 
 def _start_message_with_headers(headers: OutgoingHeaders) -> MIMEMultipart:
@@ -289,11 +282,11 @@ def _add_attachments_to_message(
 def _store_reply_record(
     mail: AWS_MailJSON, message_id: str, address: RelayAddress | DomainAddress
 ) -> AWS_MailJSON:
-    # After relaying email, store a Reply record for it
-    reply_metadata = {}
-    for header in mail["headers"]:
-        if header["name"].lower() in ["message-id", "from", "reply-to"]:
-            reply_metadata[header["name"].lower()] = header["value"]
+    reply_metadata = {
+        header["name"].lower(): header["value"]
+        for header in mail["headers"]
+        if header["name"].lower() in ["message-id", "from", "reply-to"]
+    }
     message_id_bytes = get_message_id_bytes(message_id)
     (lookup_key, encryption_key) = derive_reply_keys(message_id_bytes)
     lookup = b64_lookup_key(lookup_key)
@@ -339,7 +332,7 @@ def get_reply_to_address(premium: bool = True) -> str:
     """Return the address that relays replies."""
     if premium:
         _, reply_to_address = parseaddr(
-            "replies@%s" % get_domains_from_settings().get("RELAY_FIREFOX_DOMAIN")
+            f'replies@{get_domains_from_settings().get("RELAY_FIREFOX_DOMAIN")}'
         )
     else:
         _, reply_to_address = parseaddr(settings.RELAY_FROM_ADDRESS)
@@ -356,19 +349,20 @@ def generate_relay_From(
     # So, truncate the original sender to 900 chars so we can add our
     # "[via Relay] <relayfrom>" and encode it all.
     if len(original_from_address) > 998:
-        original_from_address = "%s ..." % original_from_address[:900]
+        original_from_address = f"{original_from_address[:900]} ..."
     # line breaks in From: will encode to unsafe chars, so strip them.
     original_from_address = (
         original_from_address.replace("\u2028", "").replace("\r", "").replace("\n", "")
     )
 
-    display_name = Header('"%s [via Relay]"' % (original_from_address), "UTF-8")
+    display_name = Header(f'"{original_from_address} [via Relay]"', "UTF-8")
     user_has_premium = bool(user_profile and user_profile.has_premium)
     relay_from_address = get_reply_to_address(user_has_premium)
-    formatted_from_address = str(
-        Address(display_name.encode(maxlinelen=998), addr_spec=relay_from_address)
+    return str(
+        Address(
+            display_name.encode(maxlinelen=998), addr_spec=relay_from_address
+        )
     )
-    return formatted_from_address
 
 
 def truncate(max_length: int, value: str) -> str:

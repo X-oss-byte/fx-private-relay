@@ -34,9 +34,8 @@ class FormattingToolsTest(TestCase):
         expected_encoded_display_name = (
             "=?utf-8?b?IiJmb8O2IGLDpHIiIDxmb29AYmFyLmNvbT4gW3ZpYSBSZWxheV0i?="
         )
-        expected_formatted_from = "%s %s" % (
-            expected_encoded_display_name,
-            "<%s>" % self.relay_from,
+        expected_formatted_from = (
+            f"{expected_encoded_display_name} <{self.relay_from}>"
         )
         assert formatted_from_address == expected_formatted_from
 
@@ -48,22 +47,20 @@ class FormattingToolsTest(TestCase):
             "=?utf-8?q?=22something_real_=3Csomethingreal=40protonmail=2Ecom"
             "=3E_=5Bvia_Relay=5D=22?="
         )
-        expected_formatted_from = "%s %s" % (
-            expected_encoded_display_name,
-            "<%s>" % self.relay_from,
+        expected_formatted_from = (
+            f"{expected_encoded_display_name} <{self.relay_from}>"
         )
         assert formatted_from_address == expected_formatted_from
 
     def test_generate_relay_From_with_rfc_2822_invalid_address(self):
-        original_from_address = "l%sng <long@long.com>" % ("o" * 999)
+        original_from_address = f'l{"o" * 999}ng <long@long.com>'
         formatted_from_address = generate_relay_From(original_from_address)
 
         expected_encoded_display_name = (
-            "=?utf-8?q?=22l%s_=2E=2E=2E_=5Bvia_Relay=5D=22?=" % ("o" * 899)
+            f'=?utf-8?q?=22l{"o" * 899}_=2E=2E=2E_=5Bvia_Relay=5D=22?='
         )
-        expected_formatted_from = "%s %s" % (
-            expected_encoded_display_name,
-            "<%s>" % self.relay_from,
+        expected_formatted_from = (
+            f"{expected_encoded_display_name} <{self.relay_from}>"
         )
         assert formatted_from_address == expected_formatted_from
 
@@ -74,9 +71,8 @@ class FormattingToolsTest(TestCase):
         expected_encoded_display_name = (
             "=?utf-8?b?IiJUZXJ5ICBjdCIgPGluZm9AYS4uLnQub3JnPiBbdmlhIFJlbGF5XSI" "=?="
         )
-        expected_formatted_from = "%s %s" % (
-            expected_encoded_display_name,
-            "<%s>" % self.relay_from,
+        expected_formatted_from = (
+            f"{expected_encoded_display_name} <{self.relay_from}>"
         )
         assert formatted_from_address == expected_formatted_from
 
@@ -90,9 +86,8 @@ class FormattingToolsTest(TestCase):
         expected_encoded_display_name = (
             "=?utf-8?b?IiJmb28gYmFyIiA8Zm9vQGJhci5jb20+IFt2aWEgUmVsYXldIg==?="
         )
-        expected_formatted_from = "%s <%s>" % (
-            expected_encoded_display_name,
-            self.premium_from,
+        expected_formatted_from = (
+            f"{expected_encoded_display_name} <{self.premium_from}>"
         )
         assert formatted_from_address == expected_formatted_from
 
@@ -106,9 +101,8 @@ class FormattingToolsTest(TestCase):
         expected_encoded_display_name = (
             "=?utf-8?b?IiJmb28gYmFyIiA8Zm9vQGJhci5jb20+IFt2aWEgUmVsYXldIg==?="
         )
-        expected_formatted_from = "%s <%s>" % (
-            expected_encoded_display_name,
-            "noreply@relaytests.com",
+        expected_formatted_from = (
+            f"{expected_encoded_display_name} <noreply@relaytests.com>"
         )
         assert formatted_from_address == expected_formatted_from
 
@@ -122,9 +116,8 @@ class FormattingToolsTest(TestCase):
         expected_encoded_display_name = (
             "=?utf-8?b?IiJmb28gYmFyIiA8Zm9vQGJhci5jb20+IFt2aWEgUmVsYXldIg==?="
         )
-        expected_formatted_from = "%s <%s>" % (
-            expected_encoded_display_name,
-            "noreply@relaytests.com",
+        expected_formatted_from = (
+            f"{expected_encoded_display_name} <noreply@relaytests.com>"
         )
         assert formatted_from_address == expected_formatted_from
 
@@ -230,10 +223,7 @@ GENERATE_FROM_TEST_CASES: dict[str, _GENERATE_FROM_TEST_CASE_DEF] = {
 def test_generate_from_header(params):
     from_header = generate_from_header(params["in_from"], params["in_to"])
     assert from_header == params["out_from"]
-    if "=?utf-8?b?" in from_header:
-        max_length = 266  # utf-8, base64 encoding maximum
-    else:
-        max_length = 78
+    max_length = 266 if "=?utf-8?b?" in from_header else 78
     first_part, rest = from_header.split(" ", 1)
     header_line = f"From: {first_part}"
     assert len(header_line) <= max_length

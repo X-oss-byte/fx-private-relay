@@ -175,9 +175,7 @@ class FlagSerializer(serializers.ModelSerializer):
         and groups to still have the flag. Setting the flag to False would also
         disable the flag for those users.
         """
-        if value:
-            return True
-        return None
+        return True if value else None
 
     def validate(self, data):
         if (data.get("name", "").lower() == "manage_flags") or (

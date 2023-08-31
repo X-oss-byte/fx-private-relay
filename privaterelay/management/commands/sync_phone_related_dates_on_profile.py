@@ -15,11 +15,11 @@ logger = logging.getLogger("events")
 def sync_phone_related_dates_on_profile(group: str) -> int:
     social_accounts_with_phones = get_phone_subscriber_social_accounts()
     free_phones_social_accounts = get_free_phone_social_accounts()
-    if group == "free":
-        social_accounts_with_phones = free_phones_social_accounts
     if group == "both":
         social_accounts_with_phones.update(free_phones_social_accounts)
 
+    elif group == "free":
+        social_accounts_with_phones = free_phones_social_accounts
     if not settings.PHONES_ENABLED or len(social_accounts_with_phones) == 0:
         return 0
 

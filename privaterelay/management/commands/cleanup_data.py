@@ -110,8 +110,7 @@ class Command(BaseCommand):
             to_clean, verbosity, tasks, issue_timers, clean_timers=clean_timers
         )
         logger.info(log_message, extra=log_data)
-        report = self.get_report(log_message, full_data)
-        return report
+        return self.get_report(log_message, full_data)
 
     def find_issues(
         self, tasks: dict[str, DataIssueTask]
@@ -231,10 +230,11 @@ class Command(BaseCommand):
             # Collect detail section data
             detail = [f"## {slug}"]
             detail.extend(textwrap.wrap(task["check_description"], width=80))
-            detail.append("")
-            detail.append(
-                f"Detected {needs_cleaning} issue{'' if needs_cleaning == 1 else 's'}"
-                f" in {query_timer} seconds."
+            detail.extend(
+                (
+                    "",
+                    f"Detected {needs_cleaning} issue{'' if needs_cleaning == 1 else 's'} in {query_timer} seconds.",
+                )
             )
             if cleaned:
                 if task["can_clean"]:

@@ -292,8 +292,7 @@ def sns_inbound(request):
     # Validate ARN and message type
     topic_arn = verified_json_body.get("TopicArn", None)
     message_type = verified_json_body.get("Type", None)
-    error_details = validate_sns_arn_and_type(topic_arn, message_type)
-    if error_details:
+    if error_details := validate_sns_arn_and_type(topic_arn, message_type):
         logger.error("validate_sns_arn_and_type_error", extra=error_details)
         return HttpResponse(error_details["error"], status=400)
 
@@ -382,8 +381,7 @@ def _sns_notification(json_body):
             },
         )
         return HttpResponse(
-            "Received SNS notification for unsupported Type: %s"
-            % html.escape(shlex.quote(notification_type)),
+            f"Received SNS notification for unsupported Type: {html.escape(shlex.quote(notification_type))}",
             status=400,
         )
     response = _sns_message(message_json)
@@ -435,7 +433,6 @@ def _sns_message(message_json: AWS_SNSMessageJSON) -> HttpResponse:
         return HttpResponse(
             "Received SNS notification without commonHeaders.", status=400
         )
-    common_headers = mail["commonHeaders"]
     receipt = message_json["receipt"]
 
     _record_receipt_verdicts(receipt, "all")
@@ -445,6 +442,7 @@ def _sns_message(message_json: AWS_SNSMessageJSON) -> HttpResponse:
         return HttpResponse("Address does not exist", status=404)
 
     _record_receipt_verdicts(receipt, "relay_recipient")
+    common_headers = mail["commonHeaders"]
     from_address = parseaddr(common_headers["from"][0])[1]
     try:
         [to_local_portion, to_domain_portion] = to_address.split("@")
@@ -467,12 +465,11 @@ def _sns_message(message_json: AWS_SNSMessageJSON) -> HttpResponse:
         CannotMakeAddressException,
         DeletedAddress.MultipleObjectsReturned,
     ):
-        if to_local_portion.lower() == "replies":
-            response = _handle_reply(from_address, message_json, to_address)
-        else:
-            response = HttpResponse("Address does not exist", status=404)
-        return response
-
+        return (
+            _handle_reply(from_address, message_json, to_address)
+            if to_local_portion.lower() == "replies"
+            else HttpResponse("Address does not exist", status=404)
+        )
     _record_receipt_verdicts(receipt, "valid_user")
     # if this is spam and the user is set to auto-block spam, early return
     if user_profile.auto_block_spam and _get_verdict(receipt, "spam") == "FAIL":
@@ -494,7 +491,7 @@ def _sns_message(message_json: AWS_SNSMessageJSON) -> HttpResponse:
     bounce_paused, bounce_type = user_profile.check_bounce_pause()
     if bounce_paused:
         _record_receipt_verdicts(receipt, "user_bounce_paused")
-        incr_if_enabled("email_suppressed_for_%s_bounce" % bounce_type, 1)
+        incr_if_enabled(f"email_suppressed_for_{bounce_type}_bounce", 1)
         return HttpResponse("Address is temporarily disabled.")
 
     # check if this is a reply from an external sender to a Relay user
@@ -588,10 +585,7 @@ def _sns_message(message_json: AWS_SNSMessageJSON) -> HttpResponse:
                 "received_at": datetime_now,
                 "trackers": tracker_details["level_one"]["trackers"],
             }
-            tracker_report_link = (
-                f"{settings.SITE_ORIGIN}/tracker-report/#"
-                + json.dumps(tracker_report_details)
-            )
+            tracker_report_link = f"{settings.SITE_ORIGIN}/tracker-report/#{json.dumps(tracker_report_details)}"
             address.num_level_one_trackers_blocked = (
                 address.num_level_one_trackers_blocked or 0
             ) + removed_count
@@ -662,14 +656,11 @@ def _sns_message(message_json: AWS_SNSMessageJSON) -> HttpResponse:
 
 
 def _get_verdict(receipt, verdict_type):
-    return receipt["%sVerdict" % verdict_type]["status"]
+    return receipt[f"{verdict_type}Verdict"]["status"]
 
 
 def _check_email_from_list(headers):
-    for header in headers:
-        if header["name"].lower().startswith("list-"):
-            return True
-    return False
+    return any(header["name"].lower().startswith("list-") for header in headers)
 
 
 def _record_receipt_verdicts(receipt, state):
@@ -764,8 +755,7 @@ def _build_reply_requires_premium_email(
         "Text": {"Charset": "utf-8", "Data": text_body},
     }
 
-    msg = create_message(headers, message_body)
-    return msg
+    return create_message(headers, message_body)
 
 
 def _set_forwarded_first_reply(profile):
@@ -977,10 +967,9 @@ def _get_address(address: str) -> RelayAddress | DomainAddress:
     # the domain is the site's 'top' relay domain, so look up the RelayAddress
     try:
         domain_numerical = get_domain_numerical(domain)
-        relay_address = RelayAddress.objects.get(
+        return RelayAddress.objects.get(
             address=local_address, domain=domain_numerical
         )
-        return relay_address
     except RelayAddress.DoesNotExist as e:
         try:
             DeletedAddress.objects.get(
@@ -1098,15 +1087,13 @@ def _handle_bounce(message_json: AWS_SNSMessageJSON) -> HttpResponse:
         )
         info_logger.info("bounce_notification", extra=data)
 
-        # Legacy log, can be removed Q4 2023
-        recipient_domain = data.get("domain")
-        if recipient_domain:
+        if recipient_domain := data.get("domain"):
             legacy_extra = {
                 "action": data.get("bounce_action"),
                 "status": data.get("bounce_status"),
                 "diagnosticCode": data.get("bounce_diagnostic"),
             }
-            legacy_extra.update(data.get("bounce_extra", {}))
+            legacy_extra |= data.get("bounce_extra", {})
             info_logger.info(
                 f"bounced recipient domain: {recipient_domain}", extra=legacy_extra
             )
@@ -1240,10 +1227,7 @@ def _get_attachment(part):
     ct = part.get_content_type()
     payload = part.get_payload(decode=True)
     payload_size = len(payload)
-    if fn:
-        extension = os.path.splitext(fn)[1]
-    else:
-        extension = mimetypes.guess_extension(ct)
+    extension = os.path.splitext(fn)[1] if fn else mimetypes.guess_extension(ct)
     tag_type = "attachment"
     attachment_extension_tag = generate_tag(tag_type, extension)
     attachment_content_type_tag = generate_tag(tag_type, ct)

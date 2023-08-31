@@ -54,10 +54,11 @@ class EmailsConfig(AppConfig):
         terms = []
         terms_file_path = os.path.join(settings.BASE_DIR, "emails", filename)
         with open(terms_file_path, "r") as terms_file:
-            for word in terms_file:
-                if len(word.strip()) > 0 and word.strip()[0] == "#":
-                    continue
-                terms.append(word.strip())
+            terms.extend(
+                word.strip()
+                for word in terms_file
+                if len(word.strip()) <= 0 or word.strip()[0] != "#"
+            )
         return terms
 
     def ready(self):

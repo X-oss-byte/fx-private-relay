@@ -101,7 +101,6 @@ if settings.PHONES_ENABLED:
         resend_welcome_sms,
     )
 
-if settings.PHONES_ENABLED:
     api_router.register(r"realphone", RealPhoneViewSet, "real_phone")
     api_router.register(r"relaynumber", RelayNumberViewSet, "relay_number")
     api_router.register(r"inboundcontact", InboundContactViewSet, "inbound_contact")
@@ -155,16 +154,16 @@ if settings.PHONES_ENABLED:
     ]
 
 
-if settings.PHONES_ENABLED and settings.IQ_ENABLED:
-    from .views.phones import inbound_sms_iq
+    if settings.IQ_ENABLED:
+        from .views.phones import inbound_sms_iq
 
-    urlpatterns += [
-        path(
-            "v1/inbound_sms_iq/",
-            enable_if_setting("IQ_ENABLED")(inbound_sms_iq),
-            name="inbound_sms",
-        ),
-    ]
+        urlpatterns += [
+            path(
+                "v1/inbound_sms_iq/",
+                enable_if_setting("IQ_ENABLED")(inbound_sms_iq),
+                name="inbound_sms",
+            ),
+        ]
 
 
 urlpatterns += [

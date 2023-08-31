@@ -216,7 +216,7 @@ def realphone_post_save(sender, instance, created, **kwargs):
 
 def vcard_lookup_key_default():
     return "".join(
-        secrets.choice(string.ascii_letters + string.digits) for i in range(6)
+        secrets.choice(string.ascii_letters + string.digits) for _ in range(6)
     )
 
 
@@ -323,14 +323,13 @@ class CachedList:
 
     def __init__(self, cache_key: str) -> None:
         self.cache_key = cache_key
-        cache_value = cache.get(self.cache_key, "")
-        if cache_value:
+        if cache_value := cache.get(self.cache_key, ""):
             self.data = cache_value.split(",")
         else:
             self.data = []
 
     def __iter__(self) -> Iterator[str]:
-        return (item for item in self.data)
+        return iter(self.data)
 
     def append(self, item: str) -> None:
         self.data.append(item)
@@ -387,7 +386,7 @@ def relaynumber_post_save(sender, instance, created, **kwargs):
         return
 
     # TODO: if IQ_FOR_NEW_NUMBERS, send welcome message via IQ
-    if not instance.vendor == "twilio":
+    if instance.vendor != "twilio":
         return
 
     if created:
@@ -447,8 +446,7 @@ def suggested_numbers(user):
             "available_numbers: This user hasn't verified a RealPhone yet."
         )
 
-    existing_number = RelayNumber.objects.filter(user=user)
-    if existing_number:
+    if existing_number := RelayNumber.objects.filter(user=user):
         raise BadRequest(
             "available_numbers: Another RelayNumber already exists for this user."
         )
@@ -460,27 +458,27 @@ def suggested_numbers(user):
     # TODO: can we make multiple pattern searches in a single Twilio API request
     same_prefix_options = []
     # look for numbers with same area code and 3-number prefix
-    contains = "%s****" % real_num[:8] if real_num else ""
+    contains = f"{real_num[:8]}****" if real_num else ""
     twilio_nums = avail_nums.local.list(contains=contains, limit=10)
     same_prefix_options.extend(convert_twilio_numbers_to_dict(twilio_nums))
 
     # look for numbers with same area code, 2-number prefix and suffix
-    contains = "%s***%s" % (real_num[:7], real_num[10:]) if real_num else ""
+    contains = f"{real_num[:7]}***{real_num[10:]}" if real_num else ""
     twilio_nums = avail_nums.local.list(contains=contains, limit=10)
     same_prefix_options.extend(convert_twilio_numbers_to_dict(twilio_nums))
 
     # look for numbers with same area code and 1-number prefix
-    contains = "%s******" % real_num[:6] if real_num else ""
+    contains = f"{real_num[:6]}******" if real_num else ""
     twilio_nums = avail_nums.local.list(contains=contains, limit=10)
     same_prefix_options.extend(convert_twilio_numbers_to_dict(twilio_nums))
 
     # look for same number in other area codes
-    contains = "+1***%s" % real_num[5:] if real_num else ""
+    contains = f"+1***{real_num[5:]}" if real_num else ""
     twilio_nums = avail_nums.local.list(contains=contains, limit=10)
     other_areas_options = convert_twilio_numbers_to_dict(twilio_nums)
 
     # look for any numbers in the area code
-    contains = "%s*******" % real_num[:5] if real_num else ""
+    contains = f"{real_num[:5]}*******" if real_num else ""
     twilio_nums = avail_nums.local.list(contains=contains, limit=10)
     same_area_options = convert_twilio_numbers_to_dict(twilio_nums)
 
@@ -518,12 +516,13 @@ def convert_twilio_numbers_to_dict(twilio_numbers):
     """
     numbers_as_dicts = []
     for twilio_number in twilio_numbers:
-        number = {}
-        number["friendly_name"] = twilio_number.friendly_name
-        number["iso_country"] = twilio_number.iso_country
-        number["locality"] = twilio_number.locality
-        number["phone_number"] = twilio_number.phone_number
-        number["postal_code"] = twilio_number.postal_code
-        number["region"] = twilio_number.region
+        number = {
+            "friendly_name": twilio_number.friendly_name,
+            "iso_country": twilio_number.iso_country,
+            "locality": twilio_number.locality,
+            "phone_number": twilio_number.phone_number,
+            "postal_code": twilio_number.postal_code,
+            "region": twilio_number.region,
+        }
         numbers_as_dicts.append(number)
     return numbers_as_dicts

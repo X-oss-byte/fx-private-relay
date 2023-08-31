@@ -54,10 +54,7 @@ def get_next_reset_date(profile: Profile) -> datetime:
     )
     if profile.date_phone_subscription_end is None:
         return calculated_next_reset_date
-    if profile.date_phone_subscription_end < calculated_next_reset_date:
-        # return the past or the closest next reset date
-        return profile.date_phone_subscription_end
-    return calculated_next_reset_date
+    return min(profile.date_phone_subscription_end, calculated_next_reset_date)
 
 
 def update_phone_remaining_stats() -> tuple[int, int]:

@@ -637,7 +637,7 @@ def test_suggested_numbers_bad_request_for_user_who_already_has_number(
 
 
 def test_suggested_numbers(phone_user, real_phone_us, mock_twilio_client):
-    mock_list = Mock(return_value=[Mock() for i in range(5)])
+    mock_list = Mock(return_value=[Mock() for _ in range(5)])
     mock_twilio_client.available_phone_numbers = Mock(
         return_value=Mock(local=Mock(list=mock_list))
     )
@@ -660,7 +660,7 @@ def test_suggested_numbers_ca(phone_user, mock_twilio_client):
     RealPhone.objects.create(
         user=phone_user, verified=True, number=real_phone, country_code="CA"
     )
-    mock_list = Mock(return_value=[Mock() for i in range(5)])
+    mock_list = Mock(return_value=[Mock() for _ in range(5)])
     mock_twilio_client.available_phone_numbers = Mock(
         return_value=Mock(local=Mock(list=mock_list))
     )
@@ -679,7 +679,7 @@ def test_suggested_numbers_ca(phone_user, mock_twilio_client):
 
 
 def test_location_numbers(mock_twilio_client):
-    mock_list = Mock(return_value=[Mock() for i in range(5)])
+    mock_list = Mock(return_value=[Mock() for _ in range(5)])
     mock_twilio_client.available_phone_numbers = Mock(
         return_value=(Mock(local=Mock(list=mock_list)))
     )
@@ -692,7 +692,7 @@ def test_location_numbers(mock_twilio_client):
 
 
 def test_area_code_numbers(mock_twilio_client):
-    mock_list = Mock(return_value=[Mock() for i in range(5)])
+    mock_list = Mock(return_value=[Mock() for _ in range(5)])
     mock_twilio_client.available_phone_numbers = Mock(
         return_value=(Mock(local=Mock(list=mock_list)))
     )

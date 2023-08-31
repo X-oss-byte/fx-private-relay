@@ -78,8 +78,7 @@ def _make_user_who_needs_welcome_email_with_locale(locale: str = "") -> User:
     user = make_free_test_user()
     user.profile.sent_welcome_email = False
     user.profile.save()
-    user_with_locale = _add_locale_to_user(user, locale)
-    return user_with_locale
+    return _add_locale_to_user(user, locale)
 
 
 def _add_locale_to_user(user: User, locale: str) -> User:

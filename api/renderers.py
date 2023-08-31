@@ -39,8 +39,7 @@ class TemplateTwiMLRenderer(renderers.TemplateHTMLRenderer):
 
     def _get_resp_status_code(self, ctx):
         ctx_resp = ctx.get("response", None)
-        status_code = getattr(ctx_resp, "status_code", None)
-        return status_code
+        return getattr(ctx_resp, "status_code", None)
 
     def render(self, data, accepted_media_type=None, renderer_context=None):
         renderer_context = renderer_context or {}

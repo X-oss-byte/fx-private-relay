@@ -26,10 +26,9 @@ class RedirectRootIfLoggedIn:
                 if request.META["QUERY_STRING"]
                 else ""
             )
-            return redirect("accounts/profile/" + query_string)
+            return redirect(f"accounts/profile/{query_string}")
 
-        response = self.get_response(request)
-        return response
+        return self.get_response(request)
 
 
 class AddDetectedCountryToRequestAndResponseHeaders:

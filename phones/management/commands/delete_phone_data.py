@@ -36,8 +36,7 @@ class Command(BaseCommand):
         if not data.has_data:
             return "User has NO PHONE DATA to delete."
 
-        confirmed = skip_confirmation or self.confirm()
-        if confirmed:
+        if confirmed := skip_confirmation or self.confirm():
             data.reset()
             return "Deleted user's phone data."
         return "User still has their phone data... FOR NOW!"
@@ -97,16 +96,12 @@ class _PhoneData:
     @property
     def real_number(self) -> str | None:
         """Get user's real phone number, if it exists."""
-        if self.real_phone:
-            return self.real_phone.number
-        return None
+        return self.real_phone.number if self.real_phone else None
 
     @property
     def relay_number(self) -> str | None:
         """Get user's Relay phone mask number, if it exists."""
-        if self.relay_phone:
-            return self.relay_phone.number
-        return None
+        return self.relay_phone.number if self.relay_phone else None
 
     def bullet_report(self) -> str:
         """Return a bulleted list of the user's data."""

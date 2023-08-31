@@ -20,7 +20,7 @@ from rest_framework.exceptions import (
 
 logger = logging.getLogger("events")
 INTROSPECT_TOKEN_URL = (
-    "%s/introspect" % settings.SOCIALACCOUNT_PROVIDERS["fxa"]["OAUTH_ENDPOINT"]
+    f'{settings.SOCIALACCOUNT_PROVIDERS["fxa"]["OAUTH_ENDPOINT"]}/introspect'
 )
 
 
@@ -64,9 +64,7 @@ def get_fxa_uid_from_oauth_token(token, use_cache=True):
         # from causing useless run-away repetitive introspection requests
         fxa_resp_data = {"status_code": None, "json": {}}
         try:
-            cached_fxa_resp_data = cache.get(cache_key)
-
-            if cached_fxa_resp_data:
+            if cached_fxa_resp_data := cache.get(cache_key):
                 fxa_resp_data = cached_fxa_resp_data
             else:
                 # no cached data, get new
@@ -81,7 +79,7 @@ def get_fxa_uid_from_oauth_token(token, use_cache=True):
     if fxa_resp_data["status_code"] is None:
         raise APIException("Previous FXA call failed, wait to retry.")
 
-    if not fxa_resp_data["status_code"] == 200:
+    if fxa_resp_data["status_code"] != 200:
         raise APIException("Did not receive a 200 response from FXA.")
 
     if not fxa_resp_data["json"].get("active"):
@@ -129,9 +127,7 @@ class FxaTokenAuthentication(BaseAuthentication):
         use_cache = True
         method = request.method
         if method in ["POST", "DELETE", "PUT"]:
-            use_cache = False
-            if method == "POST" and request.path == "/api/v1/relayaddresses/":
-                use_cache = True
+            use_cache = method == "POST" and request.path == "/api/v1/relayaddresses/"
         fxa_uid = get_fxa_uid_from_oauth_token(token, use_cache)
         try:
             # MPP-3021: select_related user object to save DB query
@@ -142,9 +138,7 @@ class FxaTokenAuthentication(BaseAuthentication):
             raise PermissionDenied(
                 "Authenticated user does not have a Relay account. Have they accepted the terms?"
             )
-        user = sa.user
-
-        if user:
+        if user := sa.user:
             return (user, token)
         else:
             raise NotFound()

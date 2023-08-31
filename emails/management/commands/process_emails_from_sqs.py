@@ -172,7 +172,7 @@ class Command(CommandFromDjangoSettings):
                     "cycle_num": self.cycles,
                     "cycle_s": 0.0,
                 }
-                cycle_data.update(self.refresh_and_emit_queue_count_metrics())
+                cycle_data |= self.refresh_and_emit_queue_count_metrics()
                 self.write_healthcheck()
 
                 # Check if we should exit due to time limit
@@ -355,32 +355,27 @@ class Command(CommandFromDjangoSettings):
         try:
             json_body = json.loads(raw_body)
         except ValueError as e:
-            results.update(
-                {
-                    "success": False,
-                    "error": f"Failed to load message.body: {e}",
-                    "message_body_quoted": shlex.quote(raw_body),
-                }
-            )
+            results |= {
+                "success": False,
+                "error": f"Failed to load message.body: {e}",
+                "message_body_quoted": shlex.quote(raw_body),
+            }
             return results
         try:
             verified_json_body = verify_from_sns(json_body)
         except (KeyError, OpenSSL.crypto.Error) as e:
             logger.error("Failed SNS verification", extra={"error": str(e)})
-            results.update(
-                {
-                    "success": False,
-                    "error": f"Failed SNS verification: {e}",
-                }
-            )
+            results |= {
+                "success": False,
+                "error": f"Failed SNS verification: {e}",
+            }
             return results
 
         topic_arn = verified_json_body["TopicArn"]
         message_type = verified_json_body["Type"]
-        error_details = validate_sns_arn_and_type(topic_arn, message_type)
-        if error_details:
+        if error_details := validate_sns_arn_and_type(topic_arn, message_type):
             results["success"] = False
-            results.update(error_details)
+            results |= error_details
             return results
 
         try:
@@ -449,4 +444,4 @@ class Command(CommandFromDjangoSettings):
         if value == 1:
             return f"{value} {singular}"
         else:
-            return f"{value} {plural or (singular + 's')}"
+            return f"{value} {plural or f'{singular}s'}"
