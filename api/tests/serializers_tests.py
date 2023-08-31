@@ -21,7 +21,7 @@ class PremiumValidatorsTest(APITestCase):
         url = reverse("relayaddress-detail", args=[free_alias.id])
         data = {"block_list_emails": True}
         free_token = Token.objects.get(user=free_user)
-        self.client.credentials(HTTP_AUTHORIZATION="Token " + free_token.key)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {free_token.key}")
         response = self.client.patch(url, data, format="json")
 
         assert response.status_code == 401
@@ -35,7 +35,7 @@ class PremiumValidatorsTest(APITestCase):
         url = reverse("relayaddress-detail", args=[free_alias.id])
         data = {"block_list_emails": False}
         free_token = Token.objects.get(user=free_user)
-        self.client.credentials(HTTP_AUTHORIZATION="Token " + free_token.key)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {free_token.key}")
         response = self.client.patch(url, data, format="json")
 
         assert response.status_code == 200
@@ -50,7 +50,7 @@ class PremiumValidatorsTest(APITestCase):
         url = reverse("relayaddress-detail", args=[premium_alias.id])
         data = {"block_list_emails": True}
         free_token = Token.objects.get(user=premium_user)
-        self.client.credentials(HTTP_AUTHORIZATION="Token " + free_token.key)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {free_token.key}")
         response = self.client.patch(url, data, format="json")
 
         assert response.status_code == 200

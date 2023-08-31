@@ -130,7 +130,7 @@ class Profile(models.Model):
     sent_welcome_email = models.BooleanField(default=False)
 
     def __str__(self):
-        return "%s Profile" % self.user
+        return f"{self.user} Profile"
 
     def save(self, *args, **kwargs):
         # always lower-case the subdomain before saving it
@@ -252,9 +252,7 @@ class Profile(models.Model):
     def last_bounce_date(self):
         if self.last_hard_bounce:
             return self.last_hard_bounce
-        if self.last_soft_bounce:
-            return self.last_soft_bounce
-        return None
+        return self.last_soft_bounce if self.last_soft_bounce else None
 
     @property
     def at_max_free_aliases(self) -> bool:
@@ -263,13 +261,14 @@ class Profile(models.Model):
 
     @property
     def fxa(self):
-        # Note: we are NOT using .filter() here because it invalidates
-        # any profile instances that were queried with prefetch_related, which
-        # we use in at least the profile view to minimize queries
-        for sa in self.user.socialaccount_set.all():
-            if sa.provider == "fxa":
-                return sa
-        return None
+        return next(
+            (
+                sa
+                for sa in self.user.socialaccount_set.all()
+                if sa.provider == "fxa"
+            ),
+            None,
+        )
 
     @property
     def display_name(self):
@@ -291,10 +290,10 @@ class Profile(models.Model):
             if self.user.email.endswith(f"@{premium_domain}"):
                 return True
         user_subscriptions = self.fxa.extra_data.get("subscriptions", [])
-        for sub in settings.SUBSCRIPTIONS_WITH_UNLIMITED:
-            if sub in user_subscriptions:
-                return True
-        return False
+        return any(
+            sub in user_subscriptions
+            for sub in settings.SUBSCRIPTIONS_WITH_UNLIMITED
+        )
 
     @property
     def has_phone(self):
@@ -306,20 +305,18 @@ class Profile(models.Model):
         if flag_is_active_in_task("free_phones", self.user):
             return True
         user_subscriptions = self.fxa.extra_data.get("subscriptions", [])
-        for sub in settings.SUBSCRIPTIONS_WITH_PHONE:
-            if sub in user_subscriptions:
-                return True
-        return False
+        return any(
+            sub in user_subscriptions for sub in settings.SUBSCRIPTIONS_WITH_PHONE
+        )
 
     @property
     def has_vpn(self):
         if not self.fxa:
             return False
         user_subscriptions = self.fxa.extra_data.get("subscriptions", [])
-        for sub in settings.SUBSCRIPTIONS_WITH_VPN:
-            if sub in user_subscriptions:
-                return True
-        return False
+        return any(
+            sub in user_subscriptions for sub in settings.SUBSCRIPTIONS_WITH_VPN
+        )
 
     @property
     def emails_forwarded(self):
@@ -344,11 +341,10 @@ class Profile(models.Model):
         # https://docs.djangoproject.com/en/4.0/ref/models/querysets/#default
         totals = [self.relay_addresses.aggregate(models.Sum("num_replied"))]
         totals.append(self.domain_addresses.aggregate(models.Sum("num_replied")))
-        total_num_replied = 0
-        for num in totals:
-            total_num_replied += (
-                num.get("num_replied__sum") if num.get("num_replied__sum") else 0
-            )
+        total_num_replied = sum(
+            (num.get("num_replied__sum") if num.get("num_replied__sum") else 0)
+            for num in totals
+        )
         return total_num_replied + self.num_email_replied_in_deleted_address
 
     @property
@@ -460,11 +456,7 @@ class Profile(models.Model):
         account_premium_feature_resumed = self.last_account_flagged + timedelta(
             days=settings.PREMIUM_FEATURE_PAUSED_DAYS
         )
-        if datetime.now(timezone.utc) > account_premium_feature_resumed:
-            # premium feature has been resumed
-            return False
-        # user was flagged and the premium feature pause period is not yet over
-        return True
+        return datetime.now(timezone.utc) <= account_premium_feature_resumed
 
 
 @receiver(models.signals.post_save, sender=Profile)
@@ -670,7 +662,7 @@ class RelayAddress(models.Model):
 
     @property
     def full_address(self):
-        return "%s@%s" % (self.address, self.domain_value)
+        return f"{self.address}@{self.domain_value}"
 
 
 def check_user_can_make_another_address(profile: Profile) -> None:
@@ -697,14 +689,12 @@ def valid_address(address, domain):
     address_already_deleted = DeletedAddress.objects.filter(
         address_hash=address_hash(address, domain=domain)
     ).count()
-    if (
-        address_already_deleted > 0
-        or address_contains_badword
-        or address_is_blocklisted
-        or not address_pattern_valid
-    ):
-        return False
-    return True
+    return bool(
+        address_already_deleted <= 0
+        and not address_contains_badword
+        and not address_is_blocklisted
+        and address_pattern_valid
+    )
 
 
 class DeletedAddress(models.Model):
@@ -830,11 +820,7 @@ class DomainAddress(models.Model):
 
     @property
     def full_address(self):
-        return "%s@%s.%s" % (
-            self.address,
-            self.user_profile.subdomain,
-            self.domain_value,
-        )
+        return f"{self.address}@{self.user_profile.subdomain}.{self.domain_value}"
 
 
 class Reply(models.Model):

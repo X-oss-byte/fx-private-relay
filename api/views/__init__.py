@@ -291,8 +291,7 @@ class FlagViewSet(viewsets.ModelViewSet):
     http_method_names = ["get", "post", "head", "patch"]
 
     def get_queryset(self):
-        flags = get_waffle_flag_model().objects
-        return flags
+        return get_waffle_flag_model().objects
 
 
 @decorators.permission_classes([permissions.IsAuthenticated])
@@ -329,10 +328,8 @@ def relay_exception_handler(exc: Exception, context: Mapping) -> Optional[Respon
         if isinstance(error_codes, str):
             response.data["error_code"] = error_codes
 
-            # Build Fluent error ID
-            ftl_id_sub = "api-error-"
             ftl_id_error = error_codes.replace("_", "-")
-            ftl_id = ftl_id_sub + ftl_id_error
+            ftl_id = f"api-error-{ftl_id_error}"
 
             # Replace default message with Fluent string
             response.data["detail"] = ftl_bundle.format(ftl_id, error_context)

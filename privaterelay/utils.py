@@ -383,8 +383,7 @@ def flag_is_active_in_task(flag_name: str, user: AbstractBaseUser | None) -> boo
     """
     flag = get_waffle_flag_model().get(flag_name)
     if not flag.pk:
-        log_level = get_waffle_setting("LOG_MISSING_FLAGS")
-        if log_level:
+        if log_level := get_waffle_setting("LOG_MISSING_FLAGS"):
             waffle_logger.log(log_level, "Flag %s not found", flag_name)
         if get_waffle_setting("CREATE_MISSING_FLAGS"):
             flag, _created = get_waffle_flag_model().objects.get_or_create(

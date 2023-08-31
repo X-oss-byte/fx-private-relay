@@ -40,9 +40,7 @@ def delete_all_later_duplicate_subdomains(apps, schema_editor):
         for dupe_subdomain_profile in later_subdomain_registrations:
             # empty out the subdomain of any new profiles that were
             # erroneously allowed to register a duplicate subdomain
-            print(
-                "clearing subdomain for: " + f"{dupe_subdomain_profile.user.username}"
-            )
+            print(f"clearing subdomain for: {dupe_subdomain_profile.user.username}")
             dupe_subdomain_profile.subdomain = None
             dupe_subdomain_profile.save()
 

@@ -226,8 +226,8 @@ def _authenticate_fxa_jwt(req_jwt: str) -> FxAEvent:
         authentic_jwt = _verify_jwt_with_fxa_key(
             req_jwt, fxa_verifying_keys(reload=True)
         )
-        if not authentic_jwt:
-            raise Exception("Could not authenticate JWT with FXA key.")
+    if not authentic_jwt:
+        raise Exception("Could not authenticate JWT with FXA key.")
 
     return authentic_jwt
 
@@ -357,8 +357,9 @@ def _update_all_data(
                 incr_if_enabled("user_has_dropped_phone", 1)
             social_account.user.email = new_email
             social_account.user.save()
-            email_address_record = social_account.user.emailaddress_set.first()
-            if email_address_record:
+            if (
+                email_address_record := social_account.user.emailaddress_set.first()
+            ):
                 email_address_record.email = new_email
                 email_address_record.save()
             else:

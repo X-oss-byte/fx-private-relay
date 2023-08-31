@@ -70,7 +70,7 @@ single_rec_file = os.path.join(
 
 EMAIL_SNS_BODIES = {}
 file_suffix = "_email_sns_body.json"
-for email_file in glob.glob(os.path.join(real_abs_cwd, "fixtures", "*" + file_suffix)):
+for email_file in glob.glob(os.path.join(real_abs_cwd, "fixtures", f"*{file_suffix}")):
     file_name = os.path.basename(email_file)
     email_type = file_name[: -len(file_suffix)]
     with open(email_file, "r") as f:
@@ -80,7 +80,7 @@ for email_file in glob.glob(os.path.join(real_abs_cwd, "fixtures", "*" + file_su
 BOUNCE_SNS_BODIES = {}
 for bounce_type in ["soft", "hard", "spam"]:
     bounce_file = os.path.join(
-        real_abs_cwd, "fixtures", "%s_bounce_sns_body.json" % bounce_type
+        real_abs_cwd, "fixtures", f"{bounce_type}_bounce_sns_body.json"
     )
     with open(bounce_file, "r") as f:
         bounce_sns_body = json.load(f)
@@ -88,9 +88,7 @@ for bounce_type in ["soft", "hard", "spam"]:
 
 INVALID_SNS_BODIES = {}
 inv_file_suffix = "_invalid_sns_body.json"
-for email_file in glob.glob(
-    os.path.join(real_abs_cwd, "fixtures", "*" + inv_file_suffix)
-):
+for email_file in glob.glob(os.path.join(real_abs_cwd, "fixtures", f"*{inv_file_suffix}")):
     file_name = os.path.basename(email_file)
     file_type = file_name[: -len(inv_file_suffix)]
     with open(email_file, "r") as f:
@@ -284,7 +282,7 @@ class SNSNotificationTest(TestCase):
         self.ra.refresh_from_db()
         assert self.ra.num_forwarded == 1
         assert self.ra.num_blocked == 0
-        assert self.ra.block_list_emails is False
+        assert not self.ra.block_list_emails
 
     def test_spamVerdict_FAIL_default_still_relays(self) -> None:
         """For a default user, spam email will still relay."""
@@ -1154,7 +1152,7 @@ class GetAttachmentTests(TestCase):
 
 
 TEST_AWS_SNS_TOPIC = "arn:aws:sns:us-east-1:111222333:relay"
-TEST_AWS_SNS_TOPIC2 = TEST_AWS_SNS_TOPIC + "-alt"
+TEST_AWS_SNS_TOPIC2 = f"{TEST_AWS_SNS_TOPIC}-alt"
 
 
 @override_settings(AWS_SNS_TOPIC={TEST_AWS_SNS_TOPIC, TEST_AWS_SNS_TOPIC2})
@@ -1174,7 +1172,7 @@ class ValidateSnsArnTypeTests(SimpleTestCase):
         }
 
     def test_wrong_topic_arn(self):
-        ret = validate_sns_arn_and_type(TEST_AWS_SNS_TOPIC + "-new", "Notification")
+        ret = validate_sns_arn_and_type(f"{TEST_AWS_SNS_TOPIC}-new", "Notification")
         assert ret["error"] == "Received SNS message for wrong topic."
 
     def test_no_message_type(self):

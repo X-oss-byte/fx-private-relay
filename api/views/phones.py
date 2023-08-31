@@ -70,8 +70,7 @@ info_logger = logging.getLogger("eventsinfo")
 
 def twilio_validator():
     phones_config = apps.get_app_config("phones")
-    validator = phones_config.twilio_validator
-    return validator
+    return phones_config.twilio_validator
 
 
 def twiml_app():
@@ -136,11 +135,7 @@ class RealPhoneViewSet(SaveToRequestUser, viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        # Check if the request includes a valid verification_code
-        # value, look for any un-expired record that matches both the phone
-        # number and verification code and mark it verified.
-        verification_code = serializer.validated_data.get("verification_code")
-        if verification_code:
+        if verification_code := serializer.validated_data.get("verification_code"):
             valid_record = get_valid_realphone_verification_record(
                 request.user, serializer.validated_data["number"], verification_code
             )
@@ -166,18 +161,14 @@ class RealPhoneViewSet(SaveToRequestUser, viewsets.ModelViewSet):
             )
             return response.Response(response_data, status=201, headers=headers)
 
-        # to prevent sending verification codes to verified numbers,
-        # check if the number is already a verified number.
-        is_verified = get_verified_realphone_record(serializer.validated_data["number"])
-        if is_verified:
+        if is_verified := get_verified_realphone_record(
+            serializer.validated_data["number"]
+        ):
             raise ConflictError("A verified record already exists for this number.")
 
-        # to prevent abusive sending of verification messages,
-        # check if there is an un-expired verification code for the user
-        pending_unverified_records = get_pending_unverified_realphone_records(
+        if pending_unverified_records := get_pending_unverified_realphone_records(
             serializer.validated_data["number"]
-        )
-        if pending_unverified_records:
+        ):
             raise ConflictError(
                 "An unverified record already exists for this number.",
             )
@@ -231,7 +222,7 @@ class RealPhoneViewSet(SaveToRequestUser, viewsets.ModelViewSet):
         # Note: the RealPhone.save() logic should prevent expired verifications
         if (
             "verification_code" not in request.data
-            or not request.data["verification_code"] == instance.verification_code
+            or request.data["verification_code"] != instance.verification_code
         ):
             raise exceptions.ValidationError(
                 "Invalid verification_code for ID. It may have expired."
@@ -286,8 +277,7 @@ class RelayNumberViewSet(SaveToRequestUser, viewsets.ModelViewSet):
         [e164]: https://en.wikipedia.org/wiki/E.164
         """  # noqa: E501  # ignore long line for URL
         incr_if_enabled("phones_RelayNumberViewSet.create")
-        existing_number = RelayNumber.objects.filter(user=request.user)
-        if existing_number:
+        if existing_number := RelayNumber.objects.filter(user=request.user):
             raise exceptions.ValidationError("User already has a RelayNumber.")
         return super().create(request, *args, **kwargs)
 
@@ -339,8 +329,7 @@ class RelayNumberViewSet(SaveToRequestUser, viewsets.ModelViewSet):
         [apn]: https://www.twilio.com/docs/phone-numbers/api/availablephonenumberlocal-resource#read-multiple-availablephonenumberlocal-resources
         """  # noqa: E501  # ignore long line for URL
         incr_if_enabled("phones_RelayNumberViewSet.search")
-        real_phone = get_verified_realphone_records(request.user).first()
-        if real_phone:
+        if real_phone := get_verified_realphone_records(request.user).first():
             country_code = real_phone.country_code
         else:
             country_code = "US"
@@ -375,9 +364,7 @@ def _validate_number(request, number_field="number"):
         request.data[number_field], getattr(request, "country", None)
     )
     if not parsed_number:
-        country = None
-        if hasattr(request, "country"):
-            country = request.country
+        country = request.country if hasattr(request, "country") else None
         error_message = (
             "number must be in E.164 format, or in local national format of the"
             f" country detected: {country}"
@@ -468,8 +455,7 @@ def resend_welcome_sms(request):
         raise exceptions.NotFound()
     send_welcome_message(request.user, relay_number)
 
-    resp = response.Response(status=201, data={"msg": "sent"})
-    return resp
+    return response.Response(status=201, data={"msg": "sent"})
 
 
 def _try_delete_from_twilio(message):
@@ -552,14 +538,12 @@ def inbound_sms(request):
             template_name="twiml_empty_response.xml",
         )
 
-    number_disabled = _check_disabled(relay_number, "texts")
-    if number_disabled:
+    if number_disabled := _check_disabled(relay_number, "texts"):
         return response.Response(
             status=200,
             template_name="twiml_empty_response.xml",
         )
-    inbound_contact = _get_inbound_contact(relay_number, inbound_from)
-    if inbound_contact:
+    if inbound_contact := _get_inbound_contact(relay_number, inbound_from):
         _check_and_update_contact(inbound_contact, "texts", relay_number)
 
     client = twilio_client()
@@ -629,12 +613,10 @@ def inbound_sms_iq(request: Request) -> response.Response:
             template_name="twiml_empty_response.xml",
         )
 
-    number_disabled = _check_disabled(relay_number, "texts")
-    if number_disabled:
+    if number_disabled := _check_disabled(relay_number, "texts"):
         return response.Response(status=200)
 
-    inbound_contact = _get_inbound_contact(relay_number, from_num)
-    if inbound_contact:
+    if inbound_contact := _get_inbound_contact(relay_number, from_num):
         _check_and_update_contact(inbound_contact, "texts", relay_number)
 
     text = message_body(inbound_from, inbound_body)
@@ -659,8 +641,7 @@ def inbound_call(request):
 
     relay_number, real_phone = _get_phone_objects(inbound_to)
 
-    number_disabled = _check_disabled(relay_number, "calls")
-    if number_disabled:
+    if number_disabled := _check_disabled(relay_number, "calls"):
         say = "Sorry, that number is not available."
         return response.Response(
             {"say": say}, status=200, template_name="twiml_blocked.xml"
@@ -668,8 +649,7 @@ def inbound_call(request):
 
     _check_remaining(relay_number, "seconds")
 
-    inbound_contact = _get_inbound_contact(relay_number, inbound_from)
-    if inbound_contact:
+    if inbound_contact := _get_inbound_contact(relay_number, inbound_from):
         _check_and_update_contact(inbound_contact, "calls", relay_number)
 
     relay_number.calls_forwarded += 1
@@ -1074,11 +1054,7 @@ def _prepare_sms_reply(
         raise NoPreviousSender(critical=True)
 
     # Determine the message body
-    if match:
-        body = inbound_body.removeprefix(match.prefix)
-    else:
-        body = inbound_body
-
+    body = inbound_body.removeprefix(match.prefix) if match else inbound_body
     # Fail if the prefix matches a sender, but there is no body to send
     if match and not body and match.match_type == "short":
         raise NoBodyAfterShortPrefix(short_prefix=match.detected)
@@ -1142,8 +1118,7 @@ def _match_senders_by_prefix(
             if e164 not in contacts_by_number:
                 contacts_by_number[e164] = contact
 
-        match = _match_by_prefix(text, set(contacts_by_number.keys()))
-        if match:
+        if match := _match_by_prefix(text, set(contacts_by_number.keys())):
             return MatchData(
                 contacts=[contacts_by_number[num] for num in match.numbers],
                 **asdict(match),
@@ -1215,17 +1190,12 @@ def _match_by_prefix(text: str, candidate_numbers: set[str]) -> Optional[MatchBy
                     break
 
             prefix = text[:end]
-            if e164 in candidate_numbers:
-                numbers = [e164]
-            else:
-                numbers = []
+            numbers = [e164] if e164 in candidate_numbers else []
             return MatchByPrefix(
                 match_type="full", prefix=prefix, detected=e164, numbers=numbers
             )
 
-    # Is there a short prefix? Return all contacts whose last 4 digits match.
-    text_prefix_match = _SMS_SHORT_PREFIX_RE.match(text)
-    if text_prefix_match:
+    if text_prefix_match := _SMS_SHORT_PREFIX_RE.match(text):
         text_prefix = text_prefix_match.group(0)
         digits = set(string.digits)
         digit_suffix = "".join(digit for digit in text_prefix if digit in digits)
@@ -1304,9 +1274,10 @@ def _validate_twilio_request(request):
         )
 
     url = request._request.build_absolute_uri()
-    sorted_params = {}
-    for param_key in sorted(request.data):
-        sorted_params[param_key] = request.data.get(param_key)
+    sorted_params = {
+        param_key: request.data.get(param_key)
+        for param_key in sorted(request.data)
+    }
     request_signature = request._request.headers["X-Twilio-Signature"]
     validator = twilio_validator()
     if not validator.validate(url, sorted_params, request_signature):
@@ -1347,10 +1318,11 @@ def convert_twilio_messages_to_dict(twilio_messages):
     """
     messages_as_dicts = []
     for twilio_message in twilio_messages:
-        message = {}
-        message["from"] = twilio_message.from_
-        message["to"] = twilio_message.to
-        message["date_sent"] = twilio_message.date_sent
-        message["body"] = twilio_message.body
+        message = {
+            "from": twilio_message.from_,
+            "to": twilio_message.to,
+            "date_sent": twilio_message.date_sent,
+            "body": twilio_message.body,
+        }
         messages_as_dicts.append(message)
     return messages_as_dicts

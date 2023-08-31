@@ -72,10 +72,9 @@ def mock_free_phones_profile(db):
 
 def _make_used_relay_number(user):
     baker.make(RealPhone, user=user, verified=True)
-    relay_number = baker.make(
+    return baker.make(
         RelayNumber, user=user, remaining_texts=10, remaining_seconds=15
     )
-    return relay_number
 
 
 def test_free_phone_user_with_no_date_phone_subscription_reset_gets_phone_limits_updated(
