@@ -6,10 +6,6 @@ from waffle import get_waffle_flag_model
 
 from emails.models import DomainAddress, Profile, RelayAddress
 
-import logging
-
-log = logging.getLogger(__name__)
-
 
 class PremiumValidatorsMixin:
     # the user must be premium to set block_list_emails=True
@@ -110,10 +106,7 @@ class DomainAddressSerializer(PremiumValidatorsMixin, serializers.ModelSerialize
 
 
 class StrictReadOnlyFieldsMixin:
-    """Raises a validation error (400) if read only fields are in the body of requests."""
-
-    # Gets added to "error_messages" in the Serializer class using this mixin
-    default_error_messages = {"read_only": ("This field is read only")}
+    """Raises a validation error (400) if read only fields are in the body of PUT/PATCH requests."""
 
     def validate(self, attrs):
         attrs = super().validate(attrs)
@@ -128,7 +121,6 @@ class StrictReadOnlyFieldsMixin:
         received_read_only_fields = set(self.initial_data).intersection(
             read_only_fields
         )
-
         if received_read_only_fields:
             errors = {}
             for field_name in received_read_only_fields:
@@ -142,6 +134,8 @@ class StrictReadOnlyFieldsMixin:
 
 
 class ProfileSerializer(StrictReadOnlyFieldsMixin, serializers.ModelSerializer):
+    default_error_messages = {"read_only": ("This field is read only")}
+
     class Meta:
         model = Profile
         fields = [
